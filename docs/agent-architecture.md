@@ -237,6 +237,7 @@ Workflows are pure TypeScript functions. No NestJS imports, no direct API calls 
 1. collectBiRate()         → BI_RATE
 2. collectFred()           → IDR_USD
 3. collectIdxPrices()      → PRICE_BBCA, PRICE_ERAA
+4. startChild(analyzeDailyWorkflow, { args: [chatId] }) per subscribed user
 ```
 
 **`collectWeeklyWorkflow()`**
@@ -263,10 +264,11 @@ Workflows are pure TypeScript functions. No NestJS imports, no direct API calls 
 
 **`analyzeWeeklyWorkflow(chatId: number)`**
 ```
-1. fetchStoredAnalyses({ days: 7 })  → reads last 7 daily analyses from DB
-2. generateWeeklySummary()           → AIService.generateWeeklySummary()
-3. sendTelegramMessage()             → delivers narrative weekly review
+1. fetchStoredAnalyses({ since: startOfWeek })  → reads all available daily analyses from the current week (Mon–Fri)
+2. generateWeeklySummary()                      → AIService.generateWeeklySummary()
+3. sendTelegramMessage()                        → delivers narrative weekly review
 ```
+Analysis uses however many daily analyses exist for that week — accounts for public holidays or collection failures without blocking delivery.
 
 **`onDemandAnalysisWorkflow(chatId: number)`**
 ```
@@ -329,13 +331,12 @@ SendActivity:
 
 | Cron | Expression | Workflows triggered |
 |---|---|---|
-| Daily collection | `0 7 * * *` | `collectDailyWorkflow` |
-| Daily analysis | `0 7 * * *` | `analyzeDailyWorkflow` for each subscribed user |
+| Daily collection + analysis | `0 7 * * 1-5` | `collectDailyWorkflow` (spawns `analyzeDailyWorkflow` as child per subscribed user after collection completes) |
 | Weekly collection | `0 8 * * 1` | `collectWeeklyWorkflow` |
 | Weekly analysis | `0 8 * * 6` | `analyzeWeeklyWorkflow` for each subscribed user |
 | Monthly collection | `0 8 2 * *` | `collectMonthlyWorkflow` |
 
-Daily collection and analysis run at the same cron time. Temporal ensures collection completes before analysis reads from DB via workflow sequencing — or analysis can be triggered as a child workflow after collection finishes.
+The scheduler triggers only `collectDailyWorkflow`. After all collection activities complete, the workflow spawns `analyzeDailyWorkflow` as a child workflow for each subscribed user via `startChild()`. This guarantees all indicators are persisted before any analysis reads from the DB.
 
 ---
 
@@ -344,9 +345,8 @@ Daily collection and analysis run at the same cron time. Temporal ensures collec
 ### Daily collection + analysis (07:00 WIB)
 
 ```
-SchedulerService @Cron("0 7 * * *")
+SchedulerService @Cron("0 7 * * 1-5")
   → TemporalClient.start(collectDailyWorkflow)
-  → TemporalClient.start(analyzeDailyWorkflow, { args: [chatId] }) per subscribed user
 
 collectDailyWorkflow
   → CollectActivity.collectBiRate()
@@ -358,6 +358,7 @@ collectDailyWorkflow
   → CollectActivity.collectIdxPrices(['BBCA','ERAA'])
         GET Yahoo Finance / IDX → parse JSON
         → EmitenIndicatorRepository.upsert({ ticker:'BBCA', code:'PRICE_BBCA', ... })
+  → startChild(analyzeDailyWorkflow, { args: [chatId] }) per subscribed user   ← collection done, safe to read DB
 
 analyzeDailyWorkflow(chatId)
   → AnalyzeActivity.fetchLatestIndicators()
@@ -379,9 +380,9 @@ SchedulerService @Cron("0 8 * * 6")
   → TemporalClient.start(analyzeWeeklyWorkflow, { args: [chatId] }) per subscribed user
 
 analyzeWeeklyWorkflow(chatId)
-  → AnalyzeActivity.fetchStoredAnalyses({ days: 7 })
-        AnalysisRepository.getDailyAnalyses(last7days)    [PostgreSQL]
-        → string[]  ← reads stored analyses, no API call
+  → AnalyzeActivity.fetchStoredAnalyses({ since: startOfWeek })
+        AnalysisRepository.getDailyAnalyses(Mon–Fri of current week)    [PostgreSQL]
+        → string[]  ← whatever analyses exist; 1–5 entries depending on trading days and failures
   → AnalyzeActivity.generateWeeklySummary(analyses)
         AIService.generateWeeklySummary(analyses)
           generateText(claude-sonnet, weekly prompt, analyses)   [Anthropic API]
@@ -521,7 +522,7 @@ SCRAPER_DELAY_MS=2000                   # delay between scrape requests
 ANTHROPIC_API_KEY=your_anthropic_key
 
 # Schedules
-CRON_DAILY_COLLECT=0 7 * * *
+CRON_DAILY_COLLECT=0 7 * * 1-5
 CRON_WEEKLY_COLLECT=0 8 * * 1
 CRON_MONTHLY_COLLECT=0 8 2 * *
 CRON_WEEKLY_ANALYSIS=0 8 * * 6
@@ -573,7 +574,7 @@ Each `generateText()` call has overhead (connection, authentication, response st
 
 ### Why weekly analysis reads stored daily analyses?
 
-Raw indicators are verbose. Stored daily analyses are already 2-3 sentence summaries per data point. Reading 7 × raw indicator sets = large input, high cost. Reading 7 daily analyses = small input, low cost. Sonnet synthesizes trend narrative from compressed analyses just as effectively.
+Raw indicators are verbose. Stored daily analyses are already 2-3 sentence summaries per data point. Reading up to 5 × raw indicator sets = large input, high cost. Reading the week's available daily analyses = small input, low cost. Sonnet synthesizes trend narrative from however many analyses exist — public holidays and collection failures simply mean fewer inputs, not a blocked delivery.
 
 ---
 
