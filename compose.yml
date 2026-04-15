@@ -9,8 +9,6 @@ services:
       - "8080:3000"
     networks:
       - temporal-network
-    depends_on:
-      - temporal
 
 networks:
   temporal-network:
