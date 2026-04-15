@@ -1,0 +1,17 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:3000"
+    networks:
+      - temporal-network
+    depends_on:
+      - temporal
+
+networks:
+  temporal-network:
+    external: true
