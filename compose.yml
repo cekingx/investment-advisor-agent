@@ -8,8 +8,8 @@ services:
     ports:
       - "8081:3000"
     networks:
-      - temporal-network
+      - dev-net 
 
 networks:
-  temporal-network:
+  dev-net:
     external: true
