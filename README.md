@@ -1,12 +1,12 @@
 # Investment Advisor Telegram Bot
 
-A RAG-based Telegram bot that collects Indonesian macro, sectoral, and emiten indicators, then delivers AI-generated daily and weekly investment digests for BBCA and ERAA to subscribed users.
+A RAG-based Telegram bot that collects Indonesian macro, sectoral, and stock indicators, then delivers AI-generated daily and weekly investment digests for BBCA and ERAA to subscribed users.
 
 ## What it does
 
 - Collects economic and market data from BI, BPS, OJK, FRED, and IDX on a scheduled basis
 - Stores the latest indicator values in PostgreSQL
-- Generates investment analysis by feeding those indicators to Claude (Haiku for daily, Sonnet for weekly)
+- Generates investment analysis by feeding those indicators to a configurable LLM via OpenAI-compatible API
 - Delivers formatted digests to subscribed users via Telegram
 
 ## Stack
@@ -15,7 +15,7 @@ A RAG-based Telegram bot that collects Indonesian macro, sectoral, and emiten in
 - **Temporal** — durable workflow orchestration (collect → analyze → send pipeline)
 - **PostgreSQL** — indicator storage and analysis history
 - **Telegraf** — Telegram bot (webhook mode)
-- **Vercel AI SDK + Anthropic** — LLM calls
+- **@ai-sdk/openai** — LLM calls via OpenAI-compatible provider
 - **Caddy** — reverse proxy and automatic SSL
 - **Docker Compose** — local and production deployment
 
@@ -70,31 +70,7 @@ npm run test:cov
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and fill in the values:
-
-```bash
-PORT=3000
-NODE_ENV=development
-
-DATABASE_URL=postgresql://postgres:password@localhost:5432/investment_advisor
-
-TEMPORAL_ADDRESS=localhost:7233
-TEMPORAL_NAMESPACE=default
-TEMPORAL_TASK_QUEUE=investment-advisor
-
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_WEBHOOK_URL=https://your-domain.com/telegram/webhook
-
-FRED_API_KEY=
-SCRAPER_DELAY_MS=2000
-
-ANTHROPIC_API_KEY=
-
-CRON_DAILY_COLLECT=0 7 * * 1-5
-CRON_WEEKLY_COLLECT=0 8 * * 1
-CRON_MONTHLY_COLLECT=0 8 2 * *
-CRON_WEEKLY_ANALYSIS=0 8 * * 6
-```
+Copy `.env.example` to `.env` and fill in the values.
 
 ## Running with Docker Compose
 

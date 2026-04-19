@@ -67,7 +67,7 @@ src/
 │   │   │   └── retail-tech/
 │   │   │       └── ipr.collector.ts        # Indeks Penjualan Riil → BPS
 │   │   │
-│   │   └── emiten/
+│   │   └── stock/
 │   │       ├── idx-price.collector.ts      # Harga saham → IDX / Yahoo Finance
 │   │       └── financial-report.collector.ts  # Laporan keuangan → IDX
 │   │
@@ -85,7 +85,7 @@ src/
 │   ├── entities/
 │   │   ├── macro-indicator.entity.ts
 │   │   ├── sectoral-indicator.entity.ts
-│   │   └── emiten-indicator.entity.ts
+│   │   └── stock-indicator.entity.ts
 │   └── migrations/
 │
 └── common/
@@ -118,7 +118,7 @@ Tanggal 2 tiap bulan, 08:00 WIB
   └── collect:macro:monthly
         ├── IKK (Indeks Keyakinan Konsumen)
         ├── GDP & CPI BPS
-        └── Laporan keuangan emiten (jika periode baru)
+        └── Laporan keuangan stock (jika periode baru)
 ```
 
 ### 3.2 Collector Module
@@ -128,7 +128,7 @@ Setiap collector mengimplementasikan interface `ICollector`:
 ```typescript
 interface ICollector {
   readonly indicatorCode: string   // e.g. 'BI_RATE', 'NPL_BANKING'
-  readonly layer: 'macro' | 'sectoral' | 'emiten'
+  readonly layer: 'macro' | 'sectoral' | 'stock'
   readonly source: string          // e.g. 'bi.go.id', 'FRED', 'OJK'
   collect(): Promise<IndicatorPayload[]>
 }
@@ -151,8 +151,8 @@ interface IndicatorPayload {
 | `bps.collector` | GDP_GROWTH, CPI_ID | Makro | BBCA & ERAA | bps.go.id |
 | `ojk-spi.collector` | NPL_BANKING, NIM_BANKING, CAR_BANKING, LOAN_GROWTH | Sektoral | BBCA | ojk.go.id |
 | `ipr.collector` | IPR_RETAIL | Sektoral | ERAA | bps.go.id |
-| `idx-price.collector` | PRICE_BBCA, PRICE_ERAA | Emiten | BBCA & ERAA | IDX |
-| `financial-report.collector` | CASA_BBCA, NPL_BBCA, SSSG_ERAA, DAYS_INV_ERAA | Emiten | BBCA & ERAA | IDX |
+| `idx-price.collector` | PRICE_BBCA, PRICE_ERAA | Stock | BBCA & ERAA | IDX |
+| `financial-report.collector` | CASA_BBCA, NPL_BBCA, SSSG_ERAA, DAYS_INV_ERAA | Stock | BBCA & ERAA | IDX |
 
 ### 3.3 Queue Module (BullMQ)
 
@@ -199,7 +199,7 @@ GET /indicators/sectoral
     ?sector=banking
     &code=NPL_BANKING
 
-GET /indicators/emiten
+GET /indicators/stock
     ?ticker=BBCA
     &code=CASA_BBCA
 
@@ -237,8 +237,8 @@ CREATE TABLE sectoral_indicators (
   UNIQUE (sector, code, period_date)
 );
 
--- Indikator emiten
-CREATE TABLE emiten_indicators (
+-- Indikator stock
+CREATE TABLE stock_indicators (
   id           SERIAL PRIMARY KEY,
   ticker       VARCHAR(10)    NOT NULL,   -- 'BBCA', 'ERAA'
   code         VARCHAR(50)    NOT NULL,   -- 'CASA_BBCA', 'SSSG_ERAA'
@@ -257,8 +257,8 @@ CREATE INDEX idx_macro_code_date
 CREATE INDEX idx_sectoral_sector_code_date
   ON sectoral_indicators (sector, code, period_date DESC);
 
-CREATE INDEX idx_emiten_ticker_code_date
-  ON emiten_indicators (ticker, code, period_date DESC);
+CREATE INDEX idx_stock_ticker_code_date
+  ON stock_indicators (ticker, code, period_date DESC);
 ```
 
 ---
@@ -290,7 +290,7 @@ CollectConsumer.process(job)
   └──▶ IdxPriceCollector.collect(['BBCA','ERAA'])
           │  GET Yahoo Finance / IDX API → parse JSON
           │  → [{ code:'PRICE_BBCA', value:8350 }, ...]
-          └──▶ EmitenIndicatorRepository.upsert()
+          └──▶ StockIndicatorRepository.upsert()
 
 Jika collector gagal:
   └── BullMQ retry otomatis (max 3x, exponential backoff 5s)
@@ -400,14 +400,14 @@ Phase 2 — Collector Makro (hari 3–5)
   ☐ BpsCollector   → GDP, CPI Indonesia
   ☐ IkkCollector   → Indeks Keyakinan Konsumen
 
-Phase 3 — Collector Sektoral & Emiten (hari 6–8)
+Phase 3 — Collector Sektoral & Stock (hari 6–8)
   ☐ OjkSpiCollector  → NPL, NIM, CAR, Loan growth
   ☐ IprCollector     → Indeks Penjualan Riil
   ☐ IdxPriceCollector → Harga BBCA & ERAA
   ☐ FinancialReportCollector → Laporan keuangan IDX
 
 Phase 4 — API & Finalisasi (hari 9–10)
-  ☐ REST API GET /indicators (macro, sectoral, emiten, latest)
+  ☐ REST API GET /indicators (macro, sectoral, stock, latest)
   ☐ Cron schedule lengkap (harian, mingguan, bulanan)
   ☐ Retry & error logging Winston
   ☐ Bull Board untuk monitor queue (opsional)

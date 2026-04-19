@@ -1,7 +1,7 @@
 # Technical Architecture
 # Investment Advisor Agent
 
-**Stack:** NestJS · TypeScript · Temporal · Vercel AI SDK (Anthropic) · PostgreSQL · Telegraf · Docker
+**Stack:** NestJS · TypeScript · Temporal · @ai-sdk/openai · PostgreSQL · Telegraf · Docker
 
 ---
 
@@ -32,7 +32,7 @@ src/
 │   │   │   │   └── ojk-spi.collector.ts    # NPL, NIM, CAR, Loan growth → OJK
 │   │   │   └── retail-tech/
 │   │   │       └── ipr.collector.ts        # Retail Sales Index → BPS
-│   │   └── emiten/
+│   │   └── stock/
 │   │       ├── idx-price.collector.ts      # Stock prices → IDX / Yahoo Finance
 │   │       └── financial-report.collector.ts  # Financial reports → IDX
 │   │
@@ -43,7 +43,7 @@ src/
 │   │
 │   ├── ai/
 │   │   ├── ai.module.ts
-│   │   └── ai.service.ts           # generateText() via Vercel AI SDK
+│   │   └── ai.service.ts           # LLM calls via @ai-sdk/openai
 │   │
 │   └── telegram/
 │       ├── telegram.module.ts
@@ -64,7 +64,7 @@ src/
 │   │   ├── user.entity.ts
 │   │   ├── macro-indicator.entity.ts
 │   │   ├── sectoral-indicator.entity.ts
-│   │   └── emiten-indicator.entity.ts
+│   │   └── stock-indicator.entity.ts
 │   └── migrations/
 │
 └── common/
@@ -111,7 +111,7 @@ Every collector implements `ICollector`:
 ```typescript
 interface ICollector {
   readonly indicatorCode: string   // e.g. 'BI_RATE', 'NPL_BANKING'
-  readonly layer: 'macro' | 'sectoral' | 'emiten'
+  readonly layer: 'macro' | 'sectoral' | 'stock'
   readonly source: string          // e.g. 'bi.go.id', 'FRED', 'OJK'
   collect(): Promise<IndicatorPayload[]>
 }
@@ -134,8 +134,8 @@ interface IndicatorPayload {
 | `bps.collector` | GDP_GROWTH, CPI_ID, HOUSEHOLD_CONSUMPTION | Macro | BBCA, ERAA |
 | `ojk-spi.collector` | NPL_BANKING, NIM_BANKING, CAR_BANKING, LOAN_GROWTH | Sectoral | BBCA |
 | `ipr.collector` | IPR_RETAIL, RETAIL_SALES_GROWTH | Sectoral | ERAA |
-| `idx-price.collector` | PRICE_BBCA, PRICE_ERAA | Emiten | BBCA, ERAA |
-| `financial-report.collector` | CASA_BBCA, NPL_BBCA, SSSG_ERAA, DAYS_INV_ERAA, etc. | Emiten | BBCA, ERAA |
+| `idx-price.collector` | PRICE_BBCA, PRICE_ERAA | Stock | BBCA, ERAA |
+| `financial-report.collector` | CASA_BBCA, NPL_BBCA, SSSG_ERAA, DAYS_INV_ERAA, etc. | Stock | BBCA, ERAA |
 
 ---
 
@@ -153,7 +153,7 @@ GET /indicators/sectoral
     ?sector=banking
     &code=NPL_BANKING
 
-GET /indicators/emiten
+GET /indicators/stock
     ?ticker=BBCA
     &code=CASA_BBCA
 
@@ -168,15 +168,17 @@ GET /indicators/latest
 **Responsibility:** Read latest indicators from PostgreSQL and generate investment analysis via Anthropic Claude.
 
 **AIService**
-- `analyzeStock(ticker, indicators)` — reads macro + sectoral + emiten indicators, returns structured top-down analysis in Telegram-formatted markdown
+- `analyzeStock(ticker, indicators)` — reads macro + sectoral + stock indicators, returns structured top-down analysis in Telegram-formatted markdown
 - `generateWeeklySummary(analyses[])` — synthesizes the week's daily analyses into a narrative weekly review
 
 **Model selection:**
 
-| Analysis type | Model | Reason |
+| Analysis type | Env var | Reason |
 |---|---|---|
-| Daily stock analysis | `claude-haiku-4-5-20251001` | Fast, cheap, sufficient for structured indicator analysis |
-| Weekly review | `claude-sonnet-4-6` | More capable for narrative synthesis and trend reasoning |
+| Daily stock analysis | `MODEL_FAST` | Fast, cheap, sufficient for structured indicator analysis |
+| Weekly review | `MODEL_SMART` | More capable for narrative synthesis and trend reasoning |
+
+Model IDs follow the provider's OpenAI-compatible format (e.g. `anthropic/claude-haiku-4-5` on OpenRouter).
 
 **Cost optimization rules:**
 - All indicators for a ticker batched into a single `generateText()` call
@@ -357,7 +359,7 @@ collectDailyWorkflow
         → MacroIndicatorRepository.upsert({ code:'IDR_USD', ... })
   → CollectActivity.collectIdxPrices(['BBCA','ERAA'])
         GET Yahoo Finance / IDX → parse JSON
-        → EmitenIndicatorRepository.upsert({ ticker:'BBCA', code:'PRICE_BBCA', ... })
+        → StockIndicatorRepository.upsert({ ticker:'BBCA', code:'PRICE_BBCA', ... })
   → startChild(analyzeDailyWorkflow, { args: [chatId] }) per subscribed user   ← collection done, safe to read DB
 
 analyzeDailyWorkflow(chatId)
@@ -365,8 +367,8 @@ analyzeDailyWorkflow(chatId)
         IndicatorRepository.getLatest(['BI_RATE','IDR_USD','PRICE_BBCA',...])
         → returns IndicatorSnapshot
   → AnalyzeActivity.analyzeStocks(snapshot)
-        AIService.analyzeStock('BBCA', macroIndicators, sectoralIndicators, emitenIndicators)
-          generateText(claude-haiku, system prompt, indicators)   [Anthropic API]
+        AIService.analyzeStock('BBCA', macroIndicators, sectoralIndicators, stockIndicators)
+          generateText(MODEL_FAST, system prompt, indicators)   [OpenAI-compatible API]
           return formatted markdown analysis
   → SendActivity.sendTelegramMessage({ chatId, text })
         TelegramService.sendMessage(chatId, text)                [Telegram API]
@@ -385,7 +387,7 @@ analyzeWeeklyWorkflow(chatId)
         → string[]  ← whatever analyses exist; 1–5 entries depending on trading days and failures
   → AnalyzeActivity.generateWeeklySummary(analyses)
         AIService.generateWeeklySummary(analyses)
-          generateText(claude-sonnet, weekly prompt, analyses)   [Anthropic API]
+          generateText(MODEL_SMART, weekly prompt, analyses)   [OpenAI-compatible API]
           return narrative markdown
   → SendActivity.sendTelegramMessage({ chatId, text })
         TelegramService.sendMessage(chatId, text)               [Telegram API]
@@ -455,8 +457,8 @@ CREATE TABLE sectoral_indicators (
   UNIQUE (sector, code, period_date)
 );
 
--- Emiten indicators (time-series)
-CREATE TABLE emiten_indicators (
+-- Stock indicators (time-series)
+CREATE TABLE stock_indicators (
   id           SERIAL PRIMARY KEY,
   ticker       VARCHAR(10)   NOT NULL,   -- 'BBCA', 'ERAA'
   code         VARCHAR(50)   NOT NULL,   -- 'CASA_BBCA', 'SSSG_ERAA'
@@ -484,8 +486,8 @@ CREATE INDEX idx_macro_code_date
 CREATE INDEX idx_sectoral_sector_code_date
   ON sectoral_indicators (sector, code, period_date DESC);
 
-CREATE INDEX idx_emiten_ticker_code_date
-  ON emiten_indicators (ticker, code, period_date DESC);
+CREATE INDEX idx_stock_ticker_code_date
+  ON stock_indicators (ticker, code, period_date DESC);
 
 CREATE INDEX idx_analyses_user_type_date
   ON analyses (user_id, type, created_at DESC);
@@ -497,36 +499,7 @@ CREATE INDEX idx_analyses_user_type_date
 
 ## 6. Environment Variables
 
-```bash
-# App
-PORT=3000
-NODE_ENV=production
-
-# PostgreSQL
-DATABASE_URL=postgresql://postgres:password@postgresql:5432/investment_advisor
-
-# Temporal
-TEMPORAL_ADDRESS=temporal:7233
-TEMPORAL_NAMESPACE=default
-TEMPORAL_TASK_QUEUE=investment-advisor
-
-# Telegram
-TELEGRAM_BOT_TOKEN=your_bot_token_from_botfather
-TELEGRAM_WEBHOOK_URL=https://your-domain.com/telegram/webhook
-
-# Data sources
-FRED_API_KEY=your_fred_api_key          # free at fred.stlouisfed.org
-SCRAPER_DELAY_MS=2000                   # delay between scrape requests
-
-# Anthropic
-ANTHROPIC_API_KEY=your_anthropic_key
-
-# Schedules
-CRON_DAILY_COLLECT=0 7 * * 1-5
-CRON_WEEKLY_COLLECT=0 8 * * 1
-CRON_MONTHLY_COLLECT=0 8 2 * *
-CRON_WEEKLY_ANALYSIS=0 8 * * 6
-```
+See `.env.example` at the project root — that file is the source of truth for all required environment variables.
 
 ---
 
@@ -568,9 +541,9 @@ Reduces VM resource usage. Temporal uses its own database (`temporal`) on the sa
 
 Caddy handles SSL certificate provisioning and renewal automatically. On a single VM with no dedicated ops team, eliminating certificate management is meaningful.
 
-### Why batch indicators into one Claude call?
+### Why batch indicators into one LLM call?
 
-Each `generateText()` call has overhead (connection, authentication, response streaming). All indicators for a ticker are batched into one call — faster and cheaper than one call per indicator. Haiku's context window comfortably fits a full indicator snapshot for one ticker.
+Each `generateText()` call has overhead (connection, authentication, response streaming). All indicators for a ticker are batched into one call — faster and cheaper than one call per indicator. `MODEL_FAST`'s context window comfortably fits a full indicator snapshot for one ticker.
 
 ### Why weekly analysis reads stored daily analyses?
 
@@ -597,7 +570,7 @@ Raw indicators are verbose. Stored daily analyses are already 2-3 sentence summa
     "@temporalio/activity": "^1",
     "telegraf": "^4",
     "ai": "^4",
-    "@ai-sdk/anthropic": "^1",
+    "@ai-sdk/openai": "^1",
     "axios": "^1",
     "cheerio": "^1",
     "zod": "^3",
@@ -642,7 +615,7 @@ Phase 4 — AI & Telegram (day 9–10)
   ☐ SchedulerService: all 5 cron jobs wired to Temporal
 
 Phase 5 — API & Finalization (day 11–12)
-  ☐ REST API GET /indicators (macro, sectoral, emiten, latest)
+  ☐ REST API GET /indicators (macro, sectoral, stock, latest)
   ☐ Docker Compose with Caddy, Temporal UI
   ☐ Winston logging + error monitoring
   ☐ End-to-end test: collect → analyze → Telegram delivery

@@ -2,7 +2,7 @@
 
 ## Document Overview
 
-- **Goal**: Build an investment advisor Telegram bot that collects Indonesian macro, sectoral, and emiten indicators, then delivers AI-generated daily and weekly digests for BBCA and ERAA to subscribed users.
+- **Goal**: Build an investment advisor Telegram bot that collects Indonesian macro, sectoral, and stock indicators, then delivers AI-generated daily and weekly digests for BBCA and ERAA to subscribed users.
 - **Status**: Draft
 
 ---
@@ -93,7 +93,7 @@ Subscribers currently have no automated, consolidated source of investment-relev
 
 #### Notes
 
-- Daily digest uses `claude-haiku-4-5-20251001` for cost efficiency
+- Daily digest uses the model configured in `MODEL_FAST` for cost efficiency
 - On-demand `/analyze` triggers the same workflow as the scheduled daily digest
 - Workflow is durable via Temporal — if analysis completes but send fails, only the send step retries
 
@@ -122,8 +122,8 @@ Subscribers currently have no automated, consolidated source of investment-relev
 #### Acceptance Criteria (User Perspective)
 
 - [ ] Subscriber receives a weekly digest automatically every Saturday at 08:00 WIB
-- [ ] Weekly digest synthesizes the week's macro, sectoral, and emiten developments into a cohesive narrative
-- [ ] Digest follows a top-down structure: macro environment → sectoral context → emiten-specific implications for both BBCA and ERAA
+- [ ] Weekly digest synthesizes the week's macro, sectoral, and stock developments into a cohesive narrative
+- [ ] Digest follows a top-down structure: macro environment → sectoral context → stock-specific implications for both BBCA and ERAA
 - [ ] Digest includes an investment outlook or actionable signal per stock (e.g., conditions are improving, headwinds remain)
 - [ ] Weekly digest is noticeably more detailed and narrative than the daily digest
 - [ ] Subscriber receives the weekly digest independently of whether they received all daily digests that week
@@ -132,7 +132,7 @@ Subscribers currently have no automated, consolidated source of investment-relev
 
 #### Notes
 
-- Weekly digest uses `claude-sonnet-4-6` for higher-quality narrative synthesis
+- Weekly digest uses the model configured in `MODEL_SMART` for higher-quality narrative synthesis
 - Source material is the 7 stored daily analyses from the past week — not raw indicators — to minimize token cost
 - Weekly collection workflow runs Monday 08:00 WIB; monthly collection on the 2nd of each month — data is available well before Saturday delivery
 
@@ -154,8 +154,8 @@ Subscribers currently have no automated, consolidated source of investment-relev
 
 - Telegram bot in webhook mode via Telegraf; NestJS exposes `POST /telegram/webhook`; Caddy handles HTTPS and certificate provisioning
 - Temporal orchestrates the durable collect → analyze → send pipeline; workflow checkpointing ensures paid LLM calls are not re-run on delivery failures
-- Data collection spans 8 collectors across macro (BI, BPS, FRED), sectoral (OJK, BPS), and emiten (IDX, Yahoo Finance) layers; each collector activity has 3 retries with exponential backoff
-- AI analysis uses Vercel AI SDK with Anthropic: Haiku for daily stock analysis (fast, low cost), Sonnet for weekly narrative synthesis (higher capability)
+- Data collection spans 8 collectors across macro (BI, BPS, FRED), sectoral (OJK, BPS), and stock (IDX, Yahoo Finance) layers; each collector activity has 3 retries with exponential backoff
+- AI analysis uses `@ai-sdk/openai` via an OpenAI-compatible provider: `MODEL_FAST` for daily stock analysis (fast, low cost), `MODEL_SMART` for weekly narrative synthesis (higher capability)
 - PostgreSQL stores indicator time-series and analysis history; Temporal uses a separate database on the same instance
 - NestJS `@Cron()` triggers Temporal workflow starts on 5 schedules: daily collection/analysis (07:00 WIB), weekly collection (Monday 08:00 WIB), weekly analysis (Saturday 08:00 WIB), monthly collection (2nd of month 08:00 WIB)
 - All services run in Docker Compose on a private bridge network; only Caddy is publicly exposed

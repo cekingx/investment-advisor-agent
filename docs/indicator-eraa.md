@@ -1,6 +1,6 @@
 # Indikator Top-Down: ERAA (Erajaya Swasembada)
 
-> Sektor: Ritel Elektronik & Distribusi | Layer: Makro → Sektoral Ritel Teknologi → Emiten ERAA
+> Sektor: Ritel Elektronik & Distribusi | Layer: Makro → Sektoral Ritel Teknologi → Stock ERAA
 
 ---
 
@@ -85,22 +85,22 @@ https://www.kemenperin.go.id
 
 ---
 
-## Layer 3 — Emiten ERAA
+## Layer 3 — Stock ERAA
 
 | Kode | Nama Indikator | Unit | Sumber | Frekuensi | Tabel DB |
 |---|---|---|---|---|---|
-| `PRICE_ERAA` | Harga saham ERAA | IDR | IDX / Yahoo Finance | Harian | `emiten_indicators` |
-| `SSSG_ERAA` | Same Store Sales Growth | % YoY | Keterbukaan informasi IDX | Bulanan | `emiten_indicators` |
-| `STORE_COUNT_ERAA` | Jumlah gerai aktif | Gerai | Keterbukaan informasi IDX | Bulanan | `emiten_indicators` |
-| `REVENUE_ERAA` | Penjualan bersih | IDR Triliun | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `GROSS_MARGIN_ERAA` | Gross Profit Margin | % | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `NET_MARGIN_ERAA` | Net Profit Margin | % | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `NET_PROFIT_ERAA` | Laba bersih | IDR Miliar | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `DAYS_INVENTORY_ERAA` | Days Inventory Outstanding | Hari | Hitung dari lapkeu | Kuartalan | `emiten_indicators` |
-| `SHORT_TERM_DEBT_ERAA` | Utang bank jangka pendek | IDR Triliun | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `PER_ERAA` | Price to Earnings Ratio | x | Hitung (PRICE / EPS TTM) | Harian | `emiten_indicators` |
-| `PBV_ERAA` | Price to Book Value | x | Hitung (PRICE / BV per share) | Harian | `emiten_indicators` |
-| `EPS_ERAA` | Earnings Per Share | IDR | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
+| `PRICE_ERAA` | Harga saham ERAA | IDR | IDX / Yahoo Finance | Harian | `stock_indicators` |
+| `SSSG_ERAA` | Same Store Sales Growth | % YoY | Keterbukaan informasi IDX | Bulanan | `stock_indicators` |
+| `STORE_COUNT_ERAA` | Jumlah gerai aktif | Gerai | Keterbukaan informasi IDX | Bulanan | `stock_indicators` |
+| `REVENUE_ERAA` | Penjualan bersih | IDR Triliun | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `GROSS_MARGIN_ERAA` | Gross Profit Margin | % | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `NET_MARGIN_ERAA` | Net Profit Margin | % | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `NET_PROFIT_ERAA` | Laba bersih | IDR Miliar | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `DAYS_INVENTORY_ERAA` | Days Inventory Outstanding | Hari | Hitung dari lapkeu | Kuartalan | `stock_indicators` |
+| `SHORT_TERM_DEBT_ERAA` | Utang bank jangka pendek | IDR Triliun | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `PER_ERAA` | Price to Earnings Ratio | x | Hitung (PRICE / EPS TTM) | Harian | `stock_indicators` |
+| `PBV_ERAA` | Price to Book Value | x | Hitung (PRICE / BV per share) | Harian | `stock_indicators` |
+| `EPS_ERAA` | Earnings Per Share | IDR | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
 
 ### Cara Baca
 
@@ -165,6 +165,6 @@ Implikasi: Jika iPhone/flagship Android terlambat masuk Indonesia
 | `bps.collector` | `CPI_ID`, `GDP_GROWTH`, `HOUSEHOLD_CONSUMPTION` | Makro |
 | `bi-rate.collector` | `BI_RATE` | Makro |
 | `ipr.collector` | `IPR_RETAIL`, `RETAIL_SALES_GROWTH` | Sektoral |
-| `idx-price.collector` | `PRICE_ERAA` | Emiten |
-| `financial-report.collector` | `REVENUE_ERAA`, `GROSS_MARGIN_ERAA`, `NET_MARGIN_ERAA`, `NET_PROFIT_ERAA`, `SHORT_TERM_DEBT_ERAA`, `EPS_ERAA` | Emiten |
-| `keterbukaan.collector` | `SSSG_ERAA`, `STORE_COUNT_ERAA` | Emiten |
+| `idx-price.collector` | `PRICE_ERAA` | Stock |
+| `financial-report.collector` | `REVENUE_ERAA`, `GROSS_MARGIN_ERAA`, `NET_MARGIN_ERAA`, `NET_PROFIT_ERAA`, `SHORT_TERM_DEBT_ERAA`, `EPS_ERAA` | Stock |
+| `keterbukaan.collector` | `SSSG_ERAA`, `STORE_COUNT_ERAA` | Stock |

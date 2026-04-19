@@ -1,6 +1,6 @@
 # Indikator Top-Down: BBCA (Bank Central Asia)
 
-> Sektor: Perbankan | Layer: Makro → Sektoral Perbankan → Emiten BBCA
+> Sektor: Perbankan | Layer: Makro → Sektoral Perbankan → Stock BBCA
 
 ---
 
@@ -70,20 +70,20 @@ statistik-perbankan-indonesia/Default.aspx
 
 ---
 
-## Layer 3 — Emiten BBCA
+## Layer 3 — Stock BBCA
 
 | Kode | Nama Indikator | Unit | Sumber | Frekuensi | Tabel DB |
 |---|---|---|---|---|---|
-| `PRICE_BBCA` | Harga saham BBCA | IDR | IDX / Yahoo Finance | Harian | `emiten_indicators` |
-| `CASA_BBCA` | CASA Ratio (Current Account Savings Account) | % | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `NPL_BBCA` | Non Performing Loan BBCA | % | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `NIM_BBCA` | Net Interest Margin BBCA | % | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `ROE_BBCA` | Return on Equity BBCA | % | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `ROA_BBCA` | Return on Assets BBCA | % | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `PBV_BBCA` | Price to Book Value | x | Hitung (PRICE / BV per share) | Harian | `emiten_indicators` |
-| `PER_BBCA` | Price to Earnings Ratio | x | Hitung (PRICE / EPS TTM) | Harian | `emiten_indicators` |
-| `EPS_BBCA` | Earnings Per Share | IDR | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
-| `NET_PROFIT_BBCA` | Laba bersih | IDR Triliun | Laporan keuangan IDX | Kuartalan | `emiten_indicators` |
+| `PRICE_BBCA` | Harga saham BBCA | IDR | IDX / Yahoo Finance | Harian | `stock_indicators` |
+| `CASA_BBCA` | CASA Ratio (Current Account Savings Account) | % | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `NPL_BBCA` | Non Performing Loan BBCA | % | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `NIM_BBCA` | Net Interest Margin BBCA | % | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `ROE_BBCA` | Return on Equity BBCA | % | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `ROA_BBCA` | Return on Assets BBCA | % | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `PBV_BBCA` | Price to Book Value | x | Hitung (PRICE / BV per share) | Harian | `stock_indicators` |
+| `PER_BBCA` | Price to Earnings Ratio | x | Hitung (PRICE / EPS TTM) | Harian | `stock_indicators` |
+| `EPS_BBCA` | Earnings Per Share | IDR | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
+| `NET_PROFIT_BBCA` | Laba bersih | IDR Triliun | Laporan keuangan IDX | Kuartalan | `stock_indicators` |
 
 ### Cara Baca
 
@@ -125,5 +125,5 @@ PBV_BBCA < 3x      → diskon historis, peluang akumulasi             → MURAH
 | `bi-rate.collector` | `BI_RATE` | Makro |
 | `bps.collector` | `GDP_GROWTH`, `CPI_ID` | Makro |
 | `ojk-spi.collector` | `LOAN_GROWTH`, `NPL_BANKING`, `NIM_BANKING`, `CAR_BANKING`, `DPK_GROWTH`, `LDR_BANKING` | Sektoral |
-| `idx-price.collector` | `PRICE_BBCA` | Emiten |
-| `financial-report.collector` | `CASA_BBCA`, `NPL_BBCA`, `NIM_BBCA`, `ROE_BBCA`, `ROA_BBCA`, `EPS_BBCA`, `NET_PROFIT_BBCA` | Emiten |
+| `idx-price.collector` | `PRICE_BBCA` | Stock |
+| `financial-report.collector` | `CASA_BBCA`, `NPL_BBCA`, `NIM_BBCA`, `ROE_BBCA`, `ROA_BBCA`, `EPS_BBCA`, `NET_PROFIT_BBCA` | Stock |
