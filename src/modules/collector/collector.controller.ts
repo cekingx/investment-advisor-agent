@@ -5,17 +5,17 @@ import { CollectorService } from './collector.service';
 export class CollectorController {
   constructor(private readonly collectorService: CollectorService) {}
 
-  @Post('bi-rate')
+  // @Post('bi-rate')
   collectBiRate() {
     return this.collectorService.collectBiRate();
   }
 
-  @Post('fred')
+  // @Post('fred')
   collectFred() {
     return this.collectorService.collectFred();
   }
 
-  @Post('idx-price')
+  // @Post('idx-price')
   collectIdxPrice() {
     return this.collectorService.collectIdxPrices();
   }

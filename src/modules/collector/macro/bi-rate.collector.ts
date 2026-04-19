@@ -1,6 +1,7 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import { firstValueFrom } from 'rxjs';
 import * as cheerio from 'cheerio';
 import { ICollector, IndicatorPayload } from '../collector.interface';
 
@@ -13,7 +14,10 @@ export class BiRateCollector implements ICollector {
   private readonly logger = new Logger(BiRateCollector.name);
   private readonly delayMs: number;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly http: HttpService,
+    private readonly config: ConfigService,
+  ) {
     this.delayMs = this.config.get<number>('SCRAPER_DELAY_MS', 2000);
   }
 
@@ -21,10 +25,12 @@ export class BiRateCollector implements ICollector {
     await new Promise((r) => setTimeout(r, this.delayMs));
 
     const url = 'https://www.bi.go.id/id/statistik/indikator/bi-rate.aspx';
-    const response = await axios.get<string>(url, {
-      timeout: 30_000,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; InvestmentAdvisorBot/1.0)' },
-    });
+    const response = await firstValueFrom(
+      this.http.get<string>(url, {
+        timeout: 30_000,
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; InvestmentAdvisorBot/1.0)' },
+      }),
+    );
 
     const $ = cheerio.load(response.data);
     const result = this.parse($);

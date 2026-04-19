@@ -65,15 +65,15 @@ Activity config: timeout 3 min, 3 retries, exponential backoff (10s → 30s → 
 
 ### Implementation Tasks
 
-- [ ] Implement `BiRateCollector.collect()` with cheerio HTML parsing and error handling
-- [ ] Implement `FredCollector.collect()` with Axios REST call and JSON parsing
-- [ ] Implement `IdxPriceCollector.collect()` with price fetch and ticker mapping
-- [ ] Implement `CollectActivity` methods: `collectBiRate`, `collectFred`, `collectIdxPrices`
-- [ ] Configure activity retry policy (timeout, retries, backoff) in activity registration
-- [ ] Add upsert logic in repository for `macro_indicators` and `stock_indicators`
-- [ ] Add structured logging on fetch errors and parse failures
-- [ ] Write unit tests for each collector with mocked HTTP responses
-- [ ] Write integration test for `CollectActivity` against real or stubbed DB
+- [x] Implement `BiRateCollector.collect()` with cheerio HTML parsing and error handling
+- [x] Implement `FredCollector.collect()` with Axios REST call and JSON parsing
+- [x] Implement `IdxPriceCollector.collect()` with price fetch and ticker mapping
+- [x] Implement `CollectActivity` methods: `collectBiRate`, `collectFred`, `collectIdxPrices`
+- [x] Configure activity retry policy (timeout, retries, backoff) in activity registration
+- [x] Add upsert logic in repository for `macro_indicators` and `stock_indicators`
+- [x] Add structured logging on fetch errors and parse failures
+- [x] Write unit tests for each collector with mocked HTTP responses
+- [x] Write integration test for `CollectActivity` against real or stubbed DB
 
 ---
 

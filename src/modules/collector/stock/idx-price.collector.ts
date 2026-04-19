@@ -1,6 +1,7 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import { firstValueFrom } from 'rxjs';
 import { ICollector, IndicatorPayload } from '../collector.interface';
 
 interface EodhdQuote {
@@ -21,7 +22,10 @@ export class IdxPriceCollector implements ICollector {
   private readonly logger = new Logger(IdxPriceCollector.name);
   private readonly apiKey: string;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly http: HttpService,
+    private readonly config: ConfigService,
+  ) {
     this.apiKey = this.config.getOrThrow<string>('EODHD_API_KEY');
   }
 
@@ -39,10 +43,12 @@ export class IdxPriceCollector implements ICollector {
   private async fetchTicker(ticker: string): Promise<IndicatorPayload | null> {
     const url = `https://eodhd.com/api/real-time/${ticker}.JK`;
 
-    const response = await axios.get<EodhdQuote>(url, {
-      timeout: 30_000,
-      params: { api_token: this.apiKey, fmt: 'json' },
-    });
+    const response = await firstValueFrom(
+      this.http.get<EodhdQuote>(url, {
+        timeout: 30_000,
+        params: { api_token: this.apiKey, fmt: 'json' },
+      }),
+    );
 
     const quote = response.data;
     const price = quote?.close ?? quote?.open;

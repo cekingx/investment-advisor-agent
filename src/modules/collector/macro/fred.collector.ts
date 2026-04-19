@@ -1,6 +1,7 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import { firstValueFrom } from 'rxjs';
 import { ICollector, IndicatorPayload } from '../collector.interface';
 
 interface FredObservation {
@@ -23,23 +24,28 @@ export class FredCollector implements ICollector {
   // DEXINUS: USD/IDR spot rate from FRED — we invert to get IDR per 1 USD
   private readonly seriesId = 'DEXINUS';
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly http: HttpService,
+    private readonly config: ConfigService,
+  ) {
     this.apiKey = this.config.getOrThrow<string>('FRED_API_KEY');
   }
 
   async collect(): Promise<IndicatorPayload[]> {
     const url = 'https://api.stlouisfed.org/fred/series/observations';
-    const response = await axios.get<FredResponse>(url, {
-      timeout: 30_000,
-      params: {
-        series_id: this.seriesId,
-        api_key: this.apiKey,
-        file_type: 'json',
-        sort_order: 'desc',
-        limit: 1,
-        observation_start: this.thirtyDaysAgo(),
-      },
-    });
+    const response = await firstValueFrom(
+      this.http.get<FredResponse>(url, {
+        timeout: 30_000,
+        params: {
+          series_id: this.seriesId,
+          api_key: this.apiKey,
+          file_type: 'json',
+          sort_order: 'desc',
+          limit: 1,
+          observation_start: this.thirtyDaysAgo(),
+        },
+      }),
+    );
 
     const observations = response.data?.observations ?? [];
     const payloads: IndicatorPayload[] = [];

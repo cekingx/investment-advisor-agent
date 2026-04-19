@@ -1,3 +1,4 @@
+import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MacroIndicator } from '../../database/entities/macro-indicator.entity';
@@ -9,7 +10,7 @@ import { CollectorService } from './collector.service';
 import { CollectorController } from './collector.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([MacroIndicator, StockIndicator])],
+  imports: [HttpModule, TypeOrmModule.forFeature([MacroIndicator, StockIndicator])],
   controllers: [CollectorController],
   providers: [BiRateCollector, FredCollector, IdxPriceCollector, CollectorService],
   exports: [CollectorService],

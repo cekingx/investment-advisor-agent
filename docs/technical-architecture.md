@@ -33,7 +33,7 @@ src/
 │   │   │   └── retail-tech/
 │   │   │       └── ipr.collector.ts        # Retail Sales Index → BPS
 │   │   └── stock/
-│   │       ├── idx-price.collector.ts      # Stock prices → IDX / Yahoo Finance
+│   │       ├── idx-price.collector.ts      # Stock prices → EODHD API
 │   │       └── financial-report.collector.ts  # Financial reports → IDX
 │   │
 │   ├── indicator/
@@ -358,7 +358,7 @@ collectDailyWorkflow
         GET api.stlouisfed.org → parse JSON
         → MacroIndicatorRepository.upsert({ code:'IDR_USD', ... })
   → CollectActivity.collectIdxPrices(['BBCA','ERAA'])
-        GET Yahoo Finance / IDX → parse JSON
+        GET eodhd.com/api/real-time/{ticker}.JK → parse JSON
         → StockIndicatorRepository.upsert({ ticker:'BBCA', code:'PRICE_BBCA', ... })
   → startChild(analyzeDailyWorkflow, { args: [chatId] }) per subscribed user   ← collection done, safe to read DB
 
