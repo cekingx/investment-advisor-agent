@@ -157,18 +157,18 @@ Activity config: timeout 1 min, 5 retries, backoff coefficient 1.5, initial inte
 
 ### Implementation Tasks
 
-- [ ] Implement `collectDailyWorkflow` with sequential activity calls and child workflow spawn per user
-- [ ] Implement `analyzeDailyWorkflow` with fetch → analyze → send chain and error catch block
-- [ ] Implement `onDemandAnalysisWorkflow` with unique workflow ID generation
-- [ ] Implement `AnalyzeActivity.fetchLatestIndicators()` reading from all three indicator tables
-- [ ] Implement `AnalyzeActivity.analyzeStocks()` calling AIService and saving result to `analyses`
-- [ ] Implement `SendActivity.sendTelegramMessage()` and `sendErrorNotification()`
-- [ ] Configure activity retry policies for AnalyzeActivity and SendActivity
-- [ ] Register all activities and workflows with the Temporal worker task queue
-- [ ] Implement `SchedulerService` cron job triggering `collectDailyWorkflow` via TemporalClient
-- [ ] Add a `fetchSubscribedUsers()` activity for use inside `collectDailyWorkflow` to get chat IDs
-- [ ] Write workflow unit tests using Temporal test environment
-- [ ] Write integration test for full collect → analyze → send pipeline in test environment
+- [x] Implement `collectDailyWorkflow` with sequential activity calls and child workflow spawn per user
+- [x] Implement `analyzeDailyWorkflow` with fetch → analyze → send chain and error catch block
+- [x] Implement `onDemandAnalysisWorkflow` with unique workflow ID generation
+- [x] Implement `AnalyzeActivity.fetchLatestIndicators()` reading from all three indicator tables
+- [x] Implement `AnalyzeActivity.analyzeStocks()` calling AIService and saving result to `analyses`
+- [x] Implement `SendActivity.sendTelegramMessage()` and `sendErrorNotification()`
+- [x] Configure activity retry policies for AnalyzeActivity and SendActivity
+- [x] Register all activities and workflows with the Temporal worker task queue
+- [x] Implement `SchedulerService` cron job triggering `collectDailyWorkflow` via TemporalClient
+- [x] Add a `fetchSubscribedUsers()` activity for use inside `collectDailyWorkflow` to get chat IDs
+- [x] Write workflow unit tests using Temporal test environment
+- [x] Write integration test for full collect → analyze → send pipeline in test environment
 
 ---
 
