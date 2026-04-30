@@ -31,12 +31,12 @@ Users need a simple, frictionless way to opt in and out of receiving investment 
 
 #### Acceptance Criteria (User Perspective)
 
-- [ ] User can send `/start` to the bot and receive a confirmation message that subscription is active
-- [ ] User sees a description of what digests they will receive and when (daily at 07:00 WIB, weekly on Saturday at 08:00 WIB)
-- [ ] User can send `/stop` to deactivate their subscription and receive a confirmation
-- [ ] User can send `/help` to see a list of available commands and the delivery schedule
-- [ ] User does not receive digests after sending `/stop`
-- [ ] User can re-subscribe by sending `/start` again after stopping
+- [x] User can send `/start` to the bot and receive a confirmation message that subscription is active
+- [x] User sees a description of what digests they will receive and when (daily at 07:00 WIB, weekly on Saturday at 08:00 WIB)
+- [x] User can send `/stop` to deactivate their subscription and receive a confirmation
+- [x] User can send `/help` to see a list of available commands and the delivery schedule
+- [x] User does not receive digests after sending `/stop`
+- [x] User can re-subscribe by sending `/start` again after stopping
 
 ---
 
@@ -152,10 +152,10 @@ Subscribers currently have no automated, consolidated source of investment-relev
 
 **Key Technical Points:**
 
-- Telegram bot in webhook mode via Telegraf; NestJS exposes `POST /telegram/webhook`; Caddy handles HTTPS and certificate provisioning
+- Telegram bot in webhook mode via Telegraf; NestJS exposes `POST /telegram/webhook`; Nginx Proxy Manager handles HTTPS and certificate provisioning via Let's Encrypt
 - Temporal orchestrates the durable collect → analyze → send pipeline; workflow checkpointing ensures paid LLM calls are not re-run on delivery failures
 - Data collection spans 8 collectors across macro (BI, BPS, FRED), sectoral (OJK, BPS), and stock (IDX, Yahoo Finance) layers; each collector activity has 3 retries with exponential backoff
-- AI analysis uses `@ai-sdk/openai` via an OpenAI-compatible provider: `MODEL_FAST` for daily stock analysis (fast, low cost), `MODEL_SMART` for weekly narrative synthesis (higher capability)
+- AI analysis uses `@ai-sdk/openai` via an OpenAI-compatible API (`LLM_BASE_URL`); default provider is Fireworks AI via Tailscale Aperture: `MODEL_FAST` for daily stock analysis (cost-optimized), `MODEL_SMART` for weekly narrative synthesis (quality-optimized)
 - PostgreSQL stores indicator time-series and analysis history; Temporal uses a separate database on the same instance
 - NestJS `@Cron()` triggers Temporal workflow starts on 5 schedules: daily collection/analysis (07:00 WIB), weekly collection (Monday 08:00 WIB), weekly analysis (Saturday 08:00 WIB), monthly collection (2nd of month 08:00 WIB)
 - All services run in Docker Compose on a private bridge network; only Caddy is publicly exposed

@@ -26,7 +26,7 @@
 
 - `BiRateCollector` — Scrapes BI Rate from bi.go.id (HTML parse via cheerio); produces `BI_RATE` in `macro_indicators`
 - `FredCollector` — Fetches IDR/USD exchange rate from FRED REST API; produces `IDR_USD` in `macro_indicators`
-- `IdxPriceCollector` — Fetches daily closing prices for BBCA and ERAA from IDX or Yahoo Finance; produces `PRICE_BBCA` and `PRICE_ERAA` in `stock_indicators`
+- `IdxPriceCollector` — Fetches daily closing prices for BBCA and ERAA from EODHD API; produces `PRICE_BBCA` and `PRICE_ERAA` in `stock_indicators`
 
 Each collector implements `ICollector`:
 - `indicatorCode: string` — e.g. `'BI_RATE'`
@@ -206,8 +206,8 @@ Activity config: timeout 1 min, 5 retries, backoff coefficient 1.5, initial inte
 
 #### Model Configuration
 
-- Uses `MODEL_FAST` env var as the model identifier (OpenAI-compatible format, e.g. `anthropic/claude-haiku-4-5` on OpenRouter)
-- Provider base URL and API key sourced from env vars (`OPENROUTER_BASE_URL`, `OPENROUTER_API_KEY` or equivalent)
+- Uses `MODEL_FAST` env var as the model identifier (OpenAI-compatible format)
+- Provider base URL and API key sourced from env vars (`LLM_BASE_URL`, `LLM_API_KEY`); default provider is Fireworks AI via Tailscale Aperture
 - All indicators for a ticker batched into a single `generateText()` call — no per-indicator calls
 
 #### Prompt Design
@@ -224,8 +224,8 @@ Activity config: timeout 1 min, 5 retries, backoff coefficient 1.5, initial inte
 
 ### Notes
 
-- OpenRouter or equivalent OpenAI-compatible provider must be configured; `@ai-sdk/openai` is used with a custom `baseURL`
-- `MODEL_FAST` must be set in `.env` — document in `.env.example`
+- Fireworks AI (default) or any OpenAI-compatible provider must be configured; `@ai-sdk/openai` is used with a custom `baseURL` (`LLM_BASE_URL`)
+- `MODEL_FAST` and `LLM_BASE_URL` must be set in `.env` — document in `.env.example`
 - Prompt token count should be validated against model context window limits; add env var `MAX_INDICATOR_COUNT` as a safety cap if needed
 - Telegram markdown uses `*bold*`, `_italic_`, `` `code` `` — avoid HTML tags or unsupported syntax
 - Error from `generateText()` should propagate to `AnalyzeActivity` for retry handling — do not swallow exceptions in AIService
@@ -234,13 +234,13 @@ Activity config: timeout 1 min, 5 retries, backoff coefficient 1.5, initial inte
 
 ### Implementation Tasks
 
-- [ ] Set up `@ai-sdk/openai` with custom `baseURL` and API key from env
+- [ ] Set up `@ai-sdk/openai` with custom `baseURL` (`LLM_BASE_URL`) and API key (`LLM_API_KEY`) from env
 - [ ] Implement `AIService.analyzeStock(ticker, indicators)` with `generateText()` call
 - [ ] Design and iterate on the system prompt for structured Telegram markdown output
 - [ ] Design the user prompt template that maps `IndicatorSnapshot` fields into readable text
 - [ ] Validate output formatting in a real Telegram chat before finalizing
 - [ ] Add error propagation (do not catch inside AIService — let activity handle retries)
-- [ ] Document `MODEL_FAST`, `OPENROUTER_BASE_URL`, `OPENROUTER_API_KEY` in `.env.example`
+- [ ] Document `MODEL_FAST`, `MODEL_SMART`, `LLM_BASE_URL`, `LLM_API_KEY` in `.env.example`
 - [ ] Write unit tests for `analyzeStock()` with mocked `generateText()` response
 - [ ] Write a manual/smoke test against the real provider to validate prompt quality
 
@@ -284,7 +284,7 @@ Activity config: timeout 1 min, 5 retries, backoff coefficient 1.5, initial inte
 #### Webhook
 
 - Telegraf configured in webhook mode
-- NestJS exposes `POST /telegram/webhook` — register this endpoint with the Telegram Bot API using the public HTTPS URL (handled by Caddy)
+- NestJS exposes `POST /telegram/webhook` — register this endpoint with the Telegram Bot API using the public HTTPS URL (handled by Nginx Proxy Manager)
 - Bot token sourced from `TELEGRAM_BOT_TOKEN` env var
 
 #### Indicator Query for `/latest`
@@ -297,7 +297,7 @@ Activity config: timeout 1 min, 5 retries, backoff coefficient 1.5, initial inte
 
 ### Notes
 
-- Webhook URL must match the Caddy-proxied public domain — set via `TELEGRAM_WEBHOOK_URL` env var or equivalent
+- Webhook URL must match the Nginx Proxy Manager-proxied public domain — set via `TELEGRAM_WEBHOOK_URL` env var or equivalent
 - `onAnalyze` must not block on workflow completion — fire and forget, reply immediately
 - `/latest` response must handle the case where no indicators are in the DB yet (e.g. first run)
 - `sendMessage` must handle Telegram API rate limits — Telegraf handles most of this but log any 429 responses
