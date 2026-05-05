@@ -69,7 +69,7 @@ flowchart TD
     EXT_BI["bi.go.id\nBI Rate"]
     EXT_FRED["FRED API\nIDR/USD"]
     EXT_IDX["EODHD API\nStock prices"]
-    EXT_LLM["OpenRouter\nLLM API"]
+    EXT_LLM["LLM Provider\nAPI"]
 
     TG -->|HTTPS webhook| TEL
     SCHED -->|start workflow| WF
