@@ -6,7 +6,7 @@ RUN npm ci --omit=dev
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --force
 COPY . .
 RUN npm run build
 
