@@ -234,15 +234,15 @@ Activity config: timeout 1 min, 5 retries, backoff coefficient 1.5, initial inte
 
 ### Implementation Tasks
 
-- [ ] Set up `@ai-sdk/openai` with custom `baseURL` (`LLM_BASE_URL`) and API key (`LLM_API_KEY`) from env
-- [ ] Implement `AIService.analyzeStock(ticker, indicators)` with `generateText()` call
-- [ ] Design and iterate on the system prompt for structured Telegram markdown output
-- [ ] Design the user prompt template that maps `IndicatorSnapshot` fields into readable text
-- [ ] Validate output formatting in a real Telegram chat before finalizing
-- [ ] Add error propagation (do not catch inside AIService — let activity handle retries)
-- [ ] Document `MODEL_FAST`, `MODEL_SMART`, `LLM_BASE_URL`, `LLM_API_KEY` in `.env.example`
-- [ ] Write unit tests for `analyzeStock()` with mocked `generateText()` response
-- [ ] Write a manual/smoke test against the real provider to validate prompt quality
+- [x] Set up `@ai-sdk/openai` with custom `baseURL` (`LLM_BASE_URL`) and API key (`LLM_API_KEY`) from env
+- [x] Implement `AIService.analyzeStock(ticker, indicators)` with `generateText()` call
+- [x] Design and iterate on the system prompt for structured Telegram markdown output
+- [x] Design the user prompt template that maps `IndicatorSnapshot` fields into readable text
+- [x] Validate output formatting in a real Telegram chat before finalizing
+- [x] Add error propagation (do not catch inside AIService — let activity handle retries)
+- [x] Document `MODEL_FAST`, `MODEL_SMART`, `LLM_BASE_URL`, `LLM_API_KEY` in `.env.example`
+- [x] Write unit tests for `analyzeStock()` with mocked `generateText()` response
+- [x] Write a manual/smoke test against the real provider to validate prompt quality
 
 ---
 

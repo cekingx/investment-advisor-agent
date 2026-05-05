@@ -14,7 +14,7 @@ import { SendActivity } from './activities/send.activity';
 import { CollectorService } from '../modules/collector/collector.service';
 import { IndicatorService } from '../modules/indicator/indicator.service';
 import { AIService } from '../modules/ai/ai.service';
-import { TelegramService } from '../modules/telegram/telegram.service';
+import { NotificationService } from '../modules/notification/notification.service';
 import { User } from '../database/entities/user.entity';
 import { Analysis } from '../database/entities/analysis.entity';
 import type { IndicatorSnapshot } from './temporal.types';
@@ -27,7 +27,7 @@ describe('Daily collect → analyze → send pipeline (integration)', () => {
   let mockCollectorService: { collectBiRate: jest.Mock; collectFred: jest.Mock; collectIdxPrices: jest.Mock };
   let mockIndicatorService: { getLatestSnapshot: jest.Mock };
   let mockAiService: { analyzeStock: jest.Mock };
-  let mockTelegramService: { sendMessage: jest.Mock; sendErrorNotification: jest.Mock };
+  let mockNotificationService: { sendMessage: jest.Mock; sendErrorNotification: jest.Mock };
   let mockUserRepo: { find: jest.Mock; findOne: jest.Mock };
   let mockAnalysisRepo: { save: jest.Mock };
 
@@ -62,7 +62,7 @@ describe('Daily collect → analyze → send pipeline (integration)', () => {
         .mockResolvedValueOnce('*BBCA* — BI Rate stable at 6%. Price: 9000 IDR. Outlook: positive.')
         .mockResolvedValueOnce('*ERAA* — Consumer confidence steady. Price: 520 IDR. Outlook: neutral.'),
     };
-    mockTelegramService = {
+    mockNotificationService = {
       sendMessage: jest.fn().mockResolvedValue(undefined),
       sendErrorNotification: jest.fn().mockResolvedValue(undefined),
     };
@@ -82,7 +82,7 @@ describe('Daily collect → analyze → send pipeline (integration)', () => {
         { provide: CollectorService, useValue: mockCollectorService },
         { provide: IndicatorService, useValue: mockIndicatorService },
         { provide: AIService, useValue: mockAiService },
-        { provide: TelegramService, useValue: mockTelegramService },
+        { provide: NotificationService, useValue: mockNotificationService },
         { provide: getRepositoryToken(User), useValue: mockUserRepo },
         { provide: getRepositoryToken(Analysis), useValue: mockAnalysisRepo },
       ],
@@ -117,7 +117,7 @@ describe('Daily collect → analyze → send pipeline (integration)', () => {
     // Phase 3: send
     await sendActivity.sendTelegramMessage(chatId, analysisText);
 
-    expect(mockTelegramService.sendMessage).toHaveBeenCalledWith(chatId, analysisText);
+    expect(mockNotificationService.sendMessage).toHaveBeenCalledWith(chatId, analysisText);
   });
 
   it('should identify subscribed users for workflow fan-out', async () => {
@@ -145,12 +145,12 @@ describe('Daily collect → analyze → send pipeline (integration)', () => {
     // Simulate workflow catch block → sendErrorNotification activity
     await sendActivity.sendErrorNotification(chatId, caughtError!.message);
 
-    expect(mockTelegramService.sendErrorNotification).toHaveBeenCalledWith(chatId);
-    expect(mockTelegramService.sendMessage).not.toHaveBeenCalled();
+    expect(mockNotificationService.sendErrorNotification).toHaveBeenCalledWith(chatId, 'LLM rate limit');
+    expect(mockNotificationService.sendMessage).not.toHaveBeenCalled();
   });
 
   it('should complete silently when error notification itself fails', async () => {
-    mockTelegramService.sendErrorNotification.mockRejectedValue(new Error('bot blocked'));
+    mockNotificationService.sendErrorNotification.mockRejectedValue(new Error('bot blocked'));
 
     // Must not throw — workflow catch block must always exit cleanly
     await expect(

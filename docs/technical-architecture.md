@@ -50,6 +50,7 @@ flowchart TD
     subgraph App ["NestJS Application"]
         SCHED["Scheduler\n@Cron triggers"]
         TEL["Telegram Module\nWebhook handler · Commands"]
+        NOTIF["Notification Module\nOutbound delivery"]
         COLL["Collector Module\nBI Rate · FRED · IDX Price"]
         IND["Indicator Module\nSnapshot reader"]
         AI["AI Module\nLLM analysis"]
@@ -77,17 +78,18 @@ flowchart TD
     ACT --> COLL
     ACT --> IND
     ACT --> AI
-    ACT --> TEL
+    ACT --> NOTIF
     COLL --> EXT_BI & EXT_FRED & EXT_IDX
     COLL --> PG
     IND --> PG
     AI --> EXT_LLM
     AI --> PG
     TEL --> TG
+    NOTIF --> TG
     WF --> TPG
 ```
 
-Inbound Telegram messages arrive at the webhook, which either handles them as bot commands directly or triggers a Temporal workflow via the workflow client. The Scheduler fires cron-based workflows on fixed schedules. Activities inside those workflows call into the application's service layer — Collectors write indicator data to PostgreSQL, the Indicator service reads it back as a snapshot, the AI service sends it to the LLM and stores the resulting analysis, and the Send activity delivers the formatted message to the user via Telegram.
+Inbound Telegram messages arrive at the webhook, which either handles them as bot commands directly or triggers a Temporal workflow via the workflow client. The Scheduler fires cron-based workflows on fixed schedules. Activities inside those workflows call into the application's service layer — Collectors write indicator data to PostgreSQL, the Indicator service reads it back as a snapshot, the AI service sends it to the LLM and stores the resulting analysis, and the Send activity delivers the formatted message to the user through the Notification module.
 
 ---
 
@@ -130,11 +132,17 @@ Model selection is environment-driven: `MODEL_FAST` is used for daily stock anal
 
 ### Telegram Module
 
-The Telegram module owns bot command handling and outbound message delivery. Telegraf is configured in webhook mode; NestJS exposes `POST /telegram/webhook`. Commands currently handled: `/start`, `/stop`, `/help`. Commands `/analyze` and `/latest` are documented in the help text but not yet wired to handlers. `sendMessage()` and `sendErrorNotification()` are called by the Send activity to push content to users.
+The Telegram module owns inbound bot command handling and webhook registration. Telegraf is configured in webhook mode; NestJS exposes `POST /telegram/webhook`. Commands handled: `/start`, `/stop`, `/help`, `/analyze`, and `/latest`. The `/analyze` command triggers an on-demand Temporal workflow; `/latest` reads the current indicator snapshot and replies immediately. Outbound message delivery is delegated to the Notification module so that Temporal activities never depend on the Telegram module, eliminating a circular dependency.
+
+### Notification Module
+
+The Notification module owns all outbound Telegram message delivery. It provides `sendMessage(chatId, text)` and `sendErrorNotification(chatId, error)` for use by the Send activity and by the Telegram module's command handlers. By isolating delivery from command handling, the dependency graph stays acyclic: Telegram depends on Temporal to start workflows, Temporal depends on Notification to send messages, and Notification depends on nothing upstream.
 
 ### Temporal Module
 
 The Temporal module owns workflow orchestration. It includes three components: `TemporalService` (the workflow client, used by Scheduler and Telegram to start workflows), `TemporalWorkerService` (registers all activities against the task queue and runs the worker), and three activity classes (`CollectActivity`, `AnalyzeActivity`, `SendActivity`) that delegate to the service layer.
+
+The Send activity delegates to `NotificationService` rather than `TelegramService` to keep the module boundary clean.
 
 Workflows live in `src/temporal/workflows/` and are pure TypeScript — no NestJS imports, only `proxyActivities()` calls. Currently implemented workflows: `collectDailyWorkflow`, `analyzeDailyWorkflow`, `onDemandAnalysisWorkflow`. A debug controller at `POST /debug/collect-daily` and `POST /debug/analyze/:chatId` enables manual workflow triggering during development.
 
@@ -269,6 +277,7 @@ A scheduled or on-demand collection begins when the Scheduler (or the debug cont
 | Telegram bot mode | Webhook (not polling) | Webhook is mandatory for production deployments on a public server; it eliminates long-polling overhead and integrates naturally with the existing HTTPS reverse proxy. |
 | LLM provider | OpenAI-compatible API via `@ai-sdk/openai` | Using an OpenAI-compatible interface means the provider can be swapped by changing `LLM_BASE_URL` without touching code. `MODEL_FAST` / `MODEL_SMART` separation lets cost and quality be tuned independently per analysis type. Default provider is Fireworks AI via Tailscale Aperture. |
 | Weekly analysis input | Stored daily analyses, not raw indicators | Raw indicator sets for a week of BBCA + ERAA would be large. Stored daily analyses are already compressed summaries. Reading up to five text analyses for the weekly synthesis is significantly cheaper and feeds the LLM more signal per token. |
+| Dependency inversion: Telegram vs. Temporal | Extract `NotificationModule` as a leaf dependency | `TelegramModule` depends on `TemporalModule` to start workflows; `TemporalModule` depends on `NotificationModule` for delivery. This eliminates the circular dependency that would otherwise require `forwardRef()` in NestJS. |
 | Schema synchronization | TypeORM `synchronize: true` in non-production | Eliminates migration friction during development. Disabled in production to prevent uncontrolled schema mutations. |
 
 ---
@@ -316,7 +325,7 @@ export async function analyzeDailyWorkflow(chatId: number): Promise<void> {
 // Activity-level: swallow secondary failure
 async sendErrorNotification(chatId: number, error: string): Promise<void> {
   try {
-    await this.telegramService.sendErrorNotification(chatId);
+    await this.notificationService.sendErrorNotification(chatId, error);
   } catch (e) {
     this.logger.error(`sendErrorNotification failed silently: ${e}`);
     // swallow — secondary failure must not propagate
@@ -408,10 +417,15 @@ src/
 │   ├── ai/
 │   │   ├── ai.module.ts
 │   │   └── ai.service.ts                # LLM calls (stubs; not yet implemented)
-│   └── telegram/
-│       ├── telegram.module.ts
-│       ├── telegram.controller.ts       # POST /telegram/webhook
-│       └── telegram.service.ts          # Command handlers, sendMessage
+│   ├── telegram/
+│   │   ├── telegram.module.ts
+│   │   ├── telegram.controller.ts       # POST /telegram/webhook
+│   │   ├── telegram.service.ts          # Command handlers, webhook setup
+│   │   └── telegram.service.spec.ts     # Unit tests for command handlers
+│   └── notification/
+│       ├── notification.module.ts
+│       ├── notification.service.ts      # Outbound Telegram delivery
+│       └── notification.service.spec.ts # Unit tests for delivery methods
 └── temporal/
     ├── temporal.module.ts
     ├── temporal.service.ts              # WorkflowClient wrapper
@@ -425,7 +439,7 @@ src/
     └── activities/
         ├── collect.activity.ts          # Delegates to CollectorService
         ├── analyze.activity.ts          # Delegates to IndicatorService + AIService
-        └── send.activity.ts             # Delegates to TelegramService
+        └── send.activity.ts             # Delegates to NotificationService
 ```
 
 ---

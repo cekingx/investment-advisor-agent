@@ -9,7 +9,7 @@ import { SendActivity } from './activities/send.activity';
 import { CollectorModule } from '../modules/collector/collector.module';
 import { IndicatorModule } from '../modules/indicator/indicator.module';
 import { AIModule } from '../modules/ai/ai.module';
-import { TelegramModule } from '../modules/telegram/telegram.module';
+import { NotificationModule } from '../modules/notification/notification.module';
 import { User } from '../database/entities/user.entity';
 import { Analysis } from '../database/entities/analysis.entity';
 
@@ -19,7 +19,7 @@ import { Analysis } from '../database/entities/analysis.entity';
     CollectorModule,
     IndicatorModule,
     AIModule,
-    TelegramModule,
+    NotificationModule,
   ],
   controllers: [TemporalController],
   providers: [TemporalService, TemporalWorkerService, CollectActivity, AnalyzeActivity, SendActivity],
